@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>站点热度分布</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        #map { width: 100%; height: 100vh; background: #f8f9fa; }
+        
+        /* 匹配模板的交互组件样式 */
+        .selector-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .selector-panel label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        select {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            outline: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: #546e7a;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="selector-panel">
+        <label>数据维度</label>
+        <select id="typeSelect">
+            <option value="start">🚴 出发频次 (Starts)</option>
+            <option value="end">🏁 到达频次 (Ends)</option>
+        </select>
+    </div>
+
+    <script>
+        const DATA = {"startSites": [{"id": "3183", "name": "Exchange Place", "lat": 40.7162469, "lng": -74.0334588, "count": 2574}, {"id": "3184", "name": "Paulus Hook", "lat": 40.7141454, "lng": -74.0335519, "count": 1129}, {"id": "3185", "name": "City Hall", "lat": 40.7177325, "lng": -74.043845, "count": 1107}, {"id": "3186", "name": "Grove St PATH", "lat": 40.71958611647166, "lng": -74.04311746358871, "count": 4806}, {"id": "3187", "name": "Warren St", "lat": 40.7211236, "lng": -74.03805095, "count": 1286}, {"id": "3191", "name": "Union St", "lat": 40.7182113, "lng": -74.0836394, "count": 99}, {"id": "3192", "name": "Liberty Light Rail", "lat": 40.7112423, "lng": -74.0557013, "count": 910}, {"id": "3193", "name": "Lincoln Park", "lat": 40.7246050998869, "lng": -74.07840594649315, "count": 300}, {"id": "3194", "name": "McGinley Square", "lat": 40.7253399253558, "lng": -74.06762212514877, "count": 593}, {"id": "3195", "name": "Sip Ave", "lat": 40.73074262530658, "lng": -74.06378388404846, "count": 2147}, {"id": "3196", "name": "Riverview Park", "lat": 40.7443187, "lng": -74.0439909, "count": 268}, {"id": "3198", "name": "Heights Elevator", "lat": 40.74871594538023, "lng": -74.04044330120087, "count": 326}, {"id": "3199", "name": "Newport Pkwy", "lat": 40.7287448, "lng": -74.0321082, "count": 1391}, {"id": "3201", "name": "Dey St", "lat": 40.737711, "lng": -74.066921, "count": 136}, {"id": "3202", "name": "Newport PATH", "lat": 40.7272235, "lng": -74.0337589, "count": 2008}, {"id": "3203", "name": "Hamilton Park", "lat": 40.727595966, "lng": -74.044247311, "count": 2636}, {"id": "3205", "name": "JC Medical Center", "lat": 40.71653978099194, "lng": -74.0496379137039, "count": 531}, {"id": "3206", "name": "Hilltop", "lat": 40.7311689, "lng": -74.0575736, "count": 396}, {"id": "3207", "name": "Oakland Ave", "lat": 40.7376037, "lng": -74.0524783, "count": 662}, {"id": "3209", "name": "Brunswick St", "lat": 40.7241765, "lng": -74.0506564, "count": 820}, {"id": "3210", "name": "Pershing Field", "lat": 40.742677141, "lng": -74.051788633, "count": 513}, {"id": "3211", "name": "Newark Ave", "lat": 40.72152515, "lng": -74.046304543, "count": 1123}, {"id": "3212", "name": "Christ Hospital", "lat": 40.734785818, "lng": -74.050443636, "count": 345}, {"id": "3213", "name": "Van Vorst Park", "lat": 40.71848892, "lng": -74.047726625, "count": 998}, {"id": "3214", "name": "Essex Light Rail", "lat": 40.7127742, "lng": -74.0364857, "count": 796}, {"id": "3220", "name": "5 Corners Library", "lat": 40.73496102000952, "lng": -74.0595030784607, "count": 245}, {"id": "3225", "name": "Baldwin at Montgomery", "lat": 40.7236589, "lng": -74.0641943, "count": 524}, {"id": "3267", "name": "Morris Canal", "lat": 40.7124188237569, "lng": -74.03852552175522, "count": 1230}, {"id": "3268", "name": "Lafayette Park", "lat": 40.71346382669195, "lng": -74.06285852193832, "count": 272}, {"id": "3269", "name": "Brunswick & 6th", "lat": 40.72601172964625, "lng": -74.05038893222809, "count": 1020}, {"id": "3270", "name": "Jersey & 6th St", "lat": 40.72528910781132, "lng": -74.04557168483734, "count": 961}, {"id": "3272", "name": "Jersey & 3rd", "lat": 40.72333158646436, "lng": -74.04595255851744, "count": 977}, {"id": "3273", "name": "Manila & 1st", "lat": 40.72165072487999, "lng": -74.04288411140442, "count": 811}, {"id": "3275", "name": "Columbus Drive", "lat": 40.71835519823214, "lng": -74.03891444206238, "count": 949}, {"id": "3276", "name": "Marin Light Rail", "lat": 40.71458403535893, "lng": -74.04281705617905, "count": 1489}, {"id": "3277", "name": "Communipaw & Berry Lane", "lat": 40.71435836870427, "lng": -74.06661093235016, "count": 177}, {"id": "3278", "name": "Monmouth and 6th", "lat": 40.72568548362901, "lng": -74.04879033565521, "count": 616}, {"id": "3279", "name": "Dixon Mills", "lat": 40.721630142638354, "lng": -74.04996782541275, "count": 676}, {"id": "3280", "name": "Astor Place", "lat": 40.71928220070702, "lng": -74.07126188278198, "count": 321}, {"id": "3281", "name": "Leonard Gordon Park", "lat": 40.74590996631558, "lng": -74.0572714805603, "count": 347}, {"id": "3426", "name": "JCBS Depot", "lat": 40.70965083364061, "lng": -74.06860113143921, "count": 1}, {"id": "3481", "name": "York St", "lat": 40.71649, "lng": -74.04105, "count": 402}, {"id": "3483", "name": "Montgomery St", "lat": 40.71942, "lng": -74.05099, "count": 408}, {"id": "3638", "name": "Washington St", "lat": 40.7242941, "lng": -74.0354826, "count": 1028}, {"id": "3639", "name": "Harborside", "lat": 40.7192517, "lng": -74.034234, "count": 1657}, {"id": "3640", "name": "Journal Square", "lat": 40.73367, "lng": -74.0625, "count": 793}, {"id": "3677", "name": "Glenwood Ave", "lat": 40.72755146730012, "lng": -74.07106071710587, "count": 162}, {"id": "3678", "name": "Fairmount Ave", "lat": 40.72572613742557, "lng": -74.07195925712585, "count": 375}, {"id": "3679", "name": "Bergen Ave", "lat": 40.722103786686034, "lng": -74.07145500183105, "count": 367}, {"id": "3681", "name": "Grand St", "lat": 40.71517767732029, "lng": -74.03768330812454, "count": 658}, {"id": "3694", "name": "Jackson Square", "lat": 40.71113, "lng": -74.0789, "count": 66}], "endSites": [{"id": "127", "name": "Barrow St & Hudson St", "lat": 40.73172428, "lng": -74.00674436, "count": 1}, {"id": "146", "name": "Hudson St & Reade St", "lat": 40.71625008, "lng": -74.0091059, "count": 1}, {"id": "157", "name": "Henry St & Atlantic Ave", "lat": 40.69089272, "lng": -73.99612349, "count": 1}, {"id": "167", "name": "E 39 St & 3 Ave", "lat": 40.7489006, "lng": -73.97604882, "count": 1}, {"id": "264", "name": "Maiden Ln & Pearl St", "lat": 40.70706456, "lng": -74.00731853, "count": 1}, {"id": "306", "name": "Cliff St & Fulton St_1", "lat": 40.70823502, "lng": -74.00530063, "count": 1}, {"id": "327", "name": "Vesey Pl & River Terrace", "lat": 40.7153379, "lng": -74.01658354, "count": 4}, {"id": "353", "name": "S Portland Ave & Hanson Pl", "lat": 40.68539567, "lng": -73.97431458, "count": 1}, {"id": "398", "name": "Atlantic Ave & Furman St", "lat": 40.69165183, "lng": -73.9999786, "count": 1}, {"id": "417", "name": "Barclay St & Church St", "lat": 40.71291224, "lng": -74.01020234, "count": 1}, {"id": "422", "name": "W 59 St & 10 Ave", "lat": 40.770513, "lng": -73.988038, "count": 1}, {"id": "453", "name": "W 22 St & 8 Ave", "lat": 40.74475148, "lng": -73.99915362, "count": 1}, {"id": "505", "name": "6 Ave & W 33 St", "lat": 40.74901271, "lng": -73.98848395, "count": 1}, {"id": "514", "name": "12 Ave & W 40 St", "lat": 40.76087502, "lng": -74.00277668, "count": 1}, {"id": "3183", "name": "Exchange Place", "lat": 40.7162469, "lng": -74.0334588, "count": 3143}, {"id": "3184", "name": "Paulus Hook", "lat": 40.7141454, "lng": -74.0335519, "count": 944}, {"id": "3185", "name": "City Hall", "lat": 40.7177325, "lng": -74.043845, "count": 1149}, {"id": "3186", "name": "Grove St PATH", "lat": 40.71958611647166, "lng": -74.04311746358871, "count": 6173}, {"id": "3187", "name": "Warren St", "lat": 40.7211236, "lng": -74.03805095, "count": 1184}, {"id": "3191", "name": "Union St", "lat": 40.7182113, "lng": -74.0836394, "count": 130}, {"id": "3192", "name": "Liberty Light Rail", "lat": 40.7112423, "lng": -74.0557013, "count": 975}, {"id": "3193", "name": "Lincoln Park", "lat": 40.7246050998869, "lng": -74.07840594649315, "count": 423}, {"id": "3194", "name": "McGinley Square", "lat": 40.7253399253558, "lng": -74.06762212514877, "count": 435}, {"id": "3195", "name": "Sip Ave", "lat": 40.73074262530658, "lng": -74.06378388404846, "count": 1822}, {"id": "3196", "name": "Riverview Park", "lat": 40.7443187, "lng": -74.0439909, "count": 221}, {"id": "3198", "name": "Heights Elevator", "lat": 40.74871594538023, "lng": -74.04044330120087, "count": 295}, {"id": "3199", "name": "Newport Pkwy", "lat": 40.7287448, "lng": -74.0321082, "count": 1373}, {"id": "3201", "name": "Dey St", "lat": 40.737711, "lng": -74.066921, "count": 192}, {"id": "3202", "name": "Newport PATH", "lat": 40.7272235, "lng": -74.0337589, "count": 2345}, {"id": "3203", "name": "Hamilton Park", "lat": 40.727595966, "lng": -74.044247311, "count": 2454}, {"id": "3205", "name": "JC Medical Center", "lat": 40.71653978099194, "lng": -74.0496379137039, "count": 606}, {"id": "3206", "name": "Hilltop", "lat": 40.7311689, "lng": -74.0575736, "count": 331}, {"id": "3207", "name": "Oakland Ave", "lat": 40.7376037, "lng": -74.0524783, "count": 469}, {"id": "3209", "name": "Brunswick St", "lat": 40.7241765, "lng": -74.0506564, "count": 732}, {"id": "3210", "name": "Pershing Field", "lat": 40.742677141, "lng": -74.051788633, "count": 510}, {"id": "3211", "name": "Newark Ave", "lat": 40.72152515, "lng": -74.046304543, "count": 1115}, {"id": "3212", "name": "Christ Hospital", "lat": 40.734785818, "lng": -74.050443636, "count": 239}, {"id": "3213", "name": "Van Vorst Park", "lat": 40.71848892, "lng": -74.047726625, "count": 861}, {"id": "3214", "name": "Essex Light Rail", "lat": 40.7127742, "lng": -74.0364857, "count": 927}, {"id": "3220", "name": "5 Corners Library", "lat": 40.73496102000952, "lng": -74.0595030784607, "count": 259}, {"id": "3225", "name": "Baldwin at Montgomery", "lat": 40.7236589, "lng": -74.0641943, "count": 459}, {"id": "3267", "name": "Morris Canal", "lat": 40.7124188237569, "lng": -74.03852552175522, "count": 1019}, {"id": "3268", "name": "Lafayette Park", "lat": 40.71346382669195, "lng": -74.06285852193832, "count": 290}, {"id": "3269", "name": "Brunswick & 6th", "lat": 40.72601172964625, "lng": -74.05038893222809, "count": 861}, {"id": "3270", "name": "Jersey & 6th St", "lat": 40.72528910781132, "lng": -74.04557168483734, "count": 781}, {"id": "3272", "name": "Jersey & 3rd", "lat": 40.72333158646436, "lng": -74.04595255851744, "count": 928}, {"id": "3273", "name": "Manila & 1st", "lat": 40.72165072487999, "lng": -74.04288411140442, "count": 814}, {"id": "3275", "name": "Columbus Drive", "lat": 40.71835519823214, "lng": -74.03891444206238, "count": 933}, {"id": "3276", "name": "Marin Light Rail", "lat": 40.71458403535893, "lng": -74.04281705617905, "count": 1436}, {"id": "3277", "name": "Communipaw & Berry Lane", "lat": 40.71435836870427, "lng": -74.06661093235016, "count": 203}, {"id": "3278", "name": "Monmouth and 6th", "lat": 40.72568548362901, "lng": -74.04879033565521, "count": 669}, {"id": "3279", "name": "Dixon Mills", "lat": 40.721630142638354, "lng": -74.04996782541275, "count": 616}, {"id": "3280", "name": "Astor Place", "lat": 40.71928220070702, "lng": -74.07126188278198, "count": 312}, {"id": "3281", "name": "Leonard Gordon Park", "lat": 40.74590996631558, "lng": -74.0572714805603, "count": 337}, {"id": "3356", "name": "Amsterdam Ave & W 66 St", "lat": 40.7746671, "lng": -73.98470567, "count": 1}, {"id": "3426", "name": "JCBS Depot", "lat": 40.70965083364061, "lng": -74.06860113143921, "count": 22}, {"id": "3481", "name": "York St", "lat": 40.71649, "lng": -74.04105, "count": 355}, {"id": "3483", "name": "Montgomery St", "lat": 40.71942, "lng": -74.05099, "count": 387}, {"id": "3539", "name": "W 116 St & Amsterdam Ave", "lat": 40.8067581, "lng": -73.9607082, "count": 1}, {"id": "3638", "name": "Washington St", "lat": 40.7242941, "lng": -74.0354826, "count": 1029}, {"id": "3639", "name": "Harborside", "lat": 40.7192517, "lng": -74.034234, "count": 1497}, {"id": "3640", "name": "Journal Square", "lat": 40.73367, "lng": -74.0625, "count": 698}, {"id": "3677", "name": "Glenwood Ave", "lat": 40.72755146730012, "lng": -74.07106071710587, "count": 127}, {"id": "3678", "name": "Fairmount Ave", "lat": 40.72572613742557, "lng": -74.07195925712585, "count": 311}, {"id": "3679", "name": "Bergen Ave", "lat": 40.722103786686034, "lng": -74.07145500183105, "count": 338}, {"id": "3681", "name": "Grand St", "lat": 40.71517767732029, "lng": -74.03768330812454, "count": 617}, {"id": "3694", "name": "Jackson Square", "lat": 40.71113, "lng": -74.0789, "count": 67}], "maxStart": 4806, "maxEnd": 6173, "centerLat": 40.72500938577307, "centerLng": -74.04437226893141};
+
+        const map = L.map('map', { zoomControl: false }).setView([DATA.centerLat, DATA.centerLng], 14);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // 使用干净的底图
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        // 模仿图片中的 Plasma 配色方案 (深紫 -> 红 -> 橙 -> 黄)
+        function getStyle(count, max) {
+            const ratio = Math.min(count / max, 1);
+            const colors = [
+                '#0d0887', '#46039f', '#7201a8', '#9c179e', 
+                '#bd3786', '#d8576b', '#ed7953', '#fb9f3a', '#fdca26', '#f0f921'
+            ];
+            const idx = Math.floor(ratio * (colors.length - 1));
+            return {
+                fillColor: colors[idx],
+                radius: 6 + 24 * Math.sqrt(ratio), // 同样使用开方缩放增大差异
+                fillOpacity: 0.75,
+                color: '#fff',
+                weight: 1
+            };
+        }
+
+        let layer = L.layerGroup().addTo(map);
+
+        function update(type) {
+            layer.clearLayers();
+            const sites = type === 'start' ? DATA.startSites : DATA.endSites;
+            const max = type === 'start' ? DATA.maxStart : DATA.maxEnd;
+
+            sites.forEach(s => {
+                const style = getStyle(s.count, max);
+                L.circleMarker([s.lat, s.lng], style)
+                    .bindPopup(`<b>${s.name}</b><br>频次: ${s.count.toLocaleString()}`)
+                    .addTo(layer);
+            });
+        }
+
+        document.getElementById('typeSelect').onchange = (e) => update(e.target.value);
+        update('start');
+    </script>
+</body>
+</html>

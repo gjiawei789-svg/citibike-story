@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Top 20 热门骑行路径</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { width: 100%; height: 100vh; background: #263238; } /* 使用深色背景突出线条 */
+        
+        .info-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); padding: 15px;
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .legend {
+            position: absolute; bottom: 30px; right: 20px; z-index: 1000;
+            background: white; padding: 10px; border-radius: 5px; font-size: 12px;
+        }
+        .dot-start { color: #81d4fa; font-weight: bold; }
+        .dot-end { color: #f48fb1; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="info-panel">
+        <h3 style="margin:0 0 10px 0;">Top 20 热门骑行路径</h3>
+        <p style="font-size: 13px; color: #666;">线条粗细代表骑行频次</p>
+    </div>
+    <div class="legend">
+        <div><span style="color:#81d4fa;">●</span> 淡蓝色：起点站</div>
+        <div><span style="color:#f48fb1;">●</span> 淡粉色：终点站</div>
+    </div>
+
+    <script>
+        const ROUTES = [{"start_name": "Hamilton Park", "start_coords": [40.727595966, -74.044247311], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 940}, {"start_name": "Grove St PATH", "start_coords": [40.71958611647166, -74.04311746358871], "end_name": "Hamilton Park", "end_coords": [40.727595966, -74.044247311], "count": 676}, {"start_name": "Brunswick & 6th", "start_coords": [40.72601172964625, -74.05038893222809], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 546}, {"start_name": "Morris Canal", "start_coords": [40.7124188237569, -74.03852552175522], "end_name": "Exchange Place", "end_coords": [40.7162469, -74.0334588], "count": 526}, {"start_name": "Marin Light Rail", "start_coords": [40.71458403535893, -74.04281705617905], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 492}, {"start_name": "Jersey & 6th St", "start_coords": [40.72528910781132, -74.04557168483734], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 458}, {"start_name": "Brunswick St", "start_coords": [40.7241765, -74.0506564], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 444}, {"start_name": "Grove St PATH", "start_coords": [40.71958611647166, -74.04311746358871], "end_name": "Marin Light Rail", "end_coords": [40.71458403535893, -74.04281705617905], "count": 437}, {"start_name": "Dixon Mills", "start_coords": [40.721630142638354, -74.04996782541275], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 433}, {"start_name": "Grove St PATH", "start_coords": [40.71958611647166, -74.04311746358871], "end_name": "Dixon Mills", "end_coords": [40.721630142638354, -74.04996782541275], "count": 367}, {"start_name": "Exchange Place", "start_coords": [40.7162469, -74.0334588], "end_name": "Morris Canal", "end_coords": [40.7124188237569, -74.03852552175522], "count": 366}, {"start_name": "Harborside", "start_coords": [40.7192517, -74.034234], "end_name": "Newport PATH", "end_coords": [40.7272235, -74.0337589], "count": 361}, {"start_name": "Grove St PATH", "start_coords": [40.71958611647166, -74.04311746358871], "end_name": "Brunswick & 6th", "end_coords": [40.72601172964625, -74.05038893222809], "count": 338}, {"start_name": "Newport PATH", "start_coords": [40.7272235, -74.0337589], "end_name": "Hamilton Park", "end_coords": [40.727595966, -74.044247311], "count": 337}, {"start_name": "Hamilton Park", "start_coords": [40.727595966, -74.044247311], "end_name": "Newport PATH", "end_coords": [40.7272235, -74.0337589], "count": 334}, {"start_name": "Monmouth and 6th", "start_coords": [40.72568548362901, -74.04879033565521], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 333}, {"start_name": "Grove St PATH", "start_coords": [40.71958611647166, -74.04311746358871], "end_name": "Monmouth and 6th", "end_coords": [40.72568548362901, -74.04879033565521], "count": 327}, {"start_name": "Grove St PATH", "start_coords": [40.71958611647166, -74.04311746358871], "end_name": "Brunswick St", "end_coords": [40.7241765, -74.0506564], "count": 316}, {"start_name": "Van Vorst Park", "start_coords": [40.71848892, -74.047726625], "end_name": "Grove St PATH", "end_coords": [40.71958611647166, -74.04311746358871], "count": 309}, {"start_name": "McGinley Square", "start_coords": [40.7253399253558, -74.06762212514877], "end_name": "Sip Ave", "end_coords": [40.73074262530658, -74.06378388404846], "count": 283}];
+        const map = L.map('map', { zoomControl: false }).setView([np.float64(40.72145276995132), np.float64(-74.04453588048743)], 14);
+        
+        // 使用暗色调地图底图，让路径更清晰
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        ROUTES.forEach(route => {
+            // 计算线宽：频次越高线越粗
+            // 使用 Math.log 或比例缩放防止线太细或太粗遮挡
+            const weight = Math.max(2, route.count / 15); 
+
+            // 绘制 OD 曲线（由于是直线 OD，使用简单的 Polyline）
+            const polyline = L.polyline([route.start_coords, route.end_coords], {
+                color: '#ffffff',
+                weight: weight,
+                opacity: 0.6,
+                lineCap: 'round'
+            }).addTo(map);
+
+            polyline.bindPopup(`
+                <b>路径详情</b><br>
+                起点: ${route.start_name}<br>
+                终点: ${route.end_name}<br>
+                骑行频次: ${route.count} 次
+            `);
+
+            // 绘制起点：淡蓝色点
+            L.circleMarker(route.start_coords, {
+                radius: 4,
+                fillColor: '#81d4fa',
+                color: '#fff',
+                weight: 1,
+                fillOpacity: 0.9
+            }).addTo(map);
+
+            // 绘制终点：淡粉色点
+            L.circleMarker(route.end_coords, {
+                radius: 4,
+                fillColor: '#f48fb1',
+                color: '#fff',
+                weight: 1,
+                fillOpacity: 0.9
+            }).addTo(map);
+        });
+    </script>
+</body>
+</html>

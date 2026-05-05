@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>用户类型分布 · 流出 vs 流入</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        .maps-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+        .map-panel {
+            flex: 1;
+            position: relative;
+            border-right: 1px solid #ddd;
+        }
+        .map-panel:last-child { border-right: none; }
+        .map-panel .map { width: 100%; height: 100%; }
+
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 160px;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: #2c3e50;
+            cursor: pointer;
+            outline: none;
+            font-weight: 500;
+        }
+        .panel-title {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="maps-container">
+        <div class="map-panel">
+            <div id="mapStart" class="map"></div>
+            <div class="panel-title">📤 流出 (起点)</div>
+            <div class="control-panel">
+                <select id="viewStart">
+                    <option value="sub">本地人 Subscriber</option>
+                    <option value="cus">游客 Customer</option>
+                    <option value="ratio">游客占比 (%)</option>
+                </select>
+            </div>
+        </div>
+        <div class="map-panel">
+            <div id="mapEnd" class="map"></div>
+            <div class="panel-title">📥 流入 (终点)</div>
+            <div class="control-panel">
+                <select id="viewEnd">
+                    <option value="sub">本地人 Subscriber</option>
+                    <option value="cus">游客 Customer</option>
+                    <option value="ratio">游客占比 (%)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DATA = {"startSites": [{"name": "Exchange Place", "lat": 40.7162469, "lng": -74.0334588, "sub": 2321, "cus": 253, "ratio": 9.83}, {"name": "Paulus Hook", "lat": 40.7141454, "lng": -74.0335519, "sub": 1014, "cus": 115, "ratio": 10.19}, {"name": "City Hall", "lat": 40.7177325, "lng": -74.043845, "sub": 1037, "cus": 70, "ratio": 6.32}, {"name": "Grove St PATH", "lat": 40.71958611647166, "lng": -74.04311746358871, "sub": 4654, "cus": 152, "ratio": 3.16}, {"name": "Warren St", "lat": 40.7211236, "lng": -74.03805095, "sub": 1212, "cus": 74, "ratio": 5.75}, {"name": "Union St", "lat": 40.7182113, "lng": -74.0836394, "sub": 89, "cus": 10, "ratio": 10.1}, {"name": "Liberty Light Rail", "lat": 40.7112423, "lng": -74.0557013, "sub": 664, "cus": 246, "ratio": 27.03}, {"name": "Lincoln Park", "lat": 40.7246050998869, "lng": -74.07840594649315, "sub": 254, "cus": 46, "ratio": 15.33}, {"name": "McGinley Square", "lat": 40.7253399253558, "lng": -74.06762212514877, "sub": 569, "cus": 24, "ratio": 4.05}, {"name": "Sip Ave", "lat": 40.73074262530658, "lng": -74.06378388404846, "sub": 2078, "cus": 69, "ratio": 3.21}, {"name": "Riverview Park", "lat": 40.7443187, "lng": -74.0439909, "sub": 243, "cus": 25, "ratio": 9.33}, {"name": "Heights Elevator", "lat": 40.74871594538023, "lng": -74.04044330120087, "sub": 295, "cus": 31, "ratio": 9.51}, {"name": "Newport Pkwy", "lat": 40.7287448, "lng": -74.0321082, "sub": 1199, "cus": 192, "ratio": 13.8}, {"name": "Dey St", "lat": 40.737711, "lng": -74.066921, "sub": 131, "cus": 5, "ratio": 3.68}, {"name": "Newport PATH", "lat": 40.7272235, "lng": -74.0337589, "sub": 1869, "cus": 139, "ratio": 6.92}, {"name": "Hamilton Park", "lat": 40.727595966, "lng": -74.044247311, "sub": 2526, "cus": 110, "ratio": 4.17}, {"name": "JC Medical Center", "lat": 40.71653978099194, "lng": -74.0496379137039, "sub": 466, "cus": 65, "ratio": 12.24}, {"name": "Hilltop", "lat": 40.7311689, "lng": -74.0575736, "sub": 353, "cus": 43, "ratio": 10.86}, {"name": "Oakland Ave", "lat": 40.7376037, "lng": -74.0524783, "sub": 612, "cus": 50, "ratio": 7.55}, {"name": "Brunswick St", "lat": 40.7241765, "lng": -74.0506564, "sub": 784, "cus": 36, "ratio": 4.39}, {"name": "Pershing Field", "lat": 40.742677141, "lng": -74.051788633, "sub": 470, "cus": 43, "ratio": 8.38}, {"name": "Newark Ave", "lat": 40.72152515, "lng": -74.046304543, "sub": 1036, "cus": 87, "ratio": 7.75}, {"name": "Christ Hospital", "lat": 40.734785818, "lng": -74.050443636, "sub": 299, "cus": 46, "ratio": 13.33}, {"name": "Van Vorst Park", "lat": 40.71848892, "lng": -74.047726625, "sub": 946, "cus": 52, "ratio": 5.21}, {"name": "Essex Light Rail", "lat": 40.7127742, "lng": -74.0364857, "sub": 717, "cus": 79, "ratio": 9.92}, {"name": "5 Corners Library", "lat": 40.73496102000952, "lng": -74.0595030784607, "sub": 237, "cus": 8, "ratio": 3.27}, {"name": "Baldwin at Montgomery", "lat": 40.7236589, "lng": -74.0641943, "sub": 492, "cus": 32, "ratio": 6.11}, {"name": "Morris Canal", "lat": 40.7124188237569, "lng": -74.03852552175522, "sub": 1157, "cus": 73, "ratio": 5.93}, {"name": "Lafayette Park", "lat": 40.71346382669195, "lng": -74.06285852193832, "sub": 243, "cus": 29, "ratio": 10.66}, {"name": "Brunswick & 6th", "lat": 40.72601172964625, "lng": -74.05038893222809, "sub": 990, "cus": 30, "ratio": 2.94}, {"name": "Jersey & 6th St", "lat": 40.72528910781132, "lng": -74.04557168483734, "sub": 932, "cus": 29, "ratio": 3.02}, {"name": "Jersey & 3rd", "lat": 40.72333158646436, "lng": -74.04595255851744, "sub": 926, "cus": 51, "ratio": 5.22}, {"name": "Manila & 1st", "lat": 40.72165072487999, "lng": -74.04288411140442, "sub": 778, "cus": 33, "ratio": 4.07}, {"name": "Columbus Drive", "lat": 40.71835519823214, "lng": -74.03891444206238, "sub": 897, "cus": 52, "ratio": 5.48}, {"name": "Marin Light Rail", "lat": 40.71458403535893, "lng": -74.04281705617905, "sub": 1312, "cus": 177, "ratio": 11.89}, {"name": "Communipaw & Berry Lane", "lat": 40.71435836870427, "lng": -74.06661093235016, "sub": 148, "cus": 29, "ratio": 16.38}, {"name": "Monmouth and 6th", "lat": 40.72568548362901, "lng": -74.04879033565521, "sub": 601, "cus": 15, "ratio": 2.44}, {"name": "Dixon Mills", "lat": 40.721630142638354, "lng": -74.04996782541275, "sub": 659, "cus": 17, "ratio": 2.51}, {"name": "Astor Place", "lat": 40.71928220070702, "lng": -74.07126188278198, "sub": 303, "cus": 18, "ratio": 5.61}, {"name": "Leonard Gordon Park", "lat": 40.74590996631558, "lng": -74.0572714805603, "sub": 321, "cus": 26, "ratio": 7.49}, {"name": "JCBS Depot", "lat": 40.70965083364061, "lng": -74.06860113143921, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "York St", "lat": 40.71649, "lng": -74.04105, "sub": 366, "cus": 36, "ratio": 8.96}, {"name": "Montgomery St", "lat": 40.71942, "lng": -74.05099, "sub": 394, "cus": 14, "ratio": 3.43}, {"name": "Washington St", "lat": 40.7242941, "lng": -74.0354826, "sub": 905, "cus": 123, "ratio": 11.96}, {"name": "Harborside", "lat": 40.7192517, "lng": -74.034234, "sub": 1523, "cus": 134, "ratio": 8.09}, {"name": "Journal Square", "lat": 40.73367, "lng": -74.0625, "sub": 745, "cus": 48, "ratio": 6.05}, {"name": "Glenwood Ave", "lat": 40.72755146730012, "lng": -74.07106071710587, "sub": 140, "cus": 22, "ratio": 13.58}, {"name": "Fairmount Ave", "lat": 40.72572613742557, "lng": -74.07195925712585, "sub": 341, "cus": 34, "ratio": 9.07}, {"name": "Bergen Ave", "lat": 40.722103786686034, "lng": -74.07145500183105, "sub": 352, "cus": 15, "ratio": 4.09}, {"name": "Grand St", "lat": 40.71517767732029, "lng": -74.03768330812454, "sub": 621, "cus": 37, "ratio": 5.62}, {"name": "Jackson Square", "lat": 40.71113, "lng": -74.0789, "sub": 52, "cus": 14, "ratio": 21.21}], "endSites": [{"name": "Barrow St & Hudson St", "lat": 40.73172428, "lng": -74.00674436, "sub": 0, "cus": 1, "ratio": 100.0}, {"name": "Hudson St & Reade St", "lat": 40.71625008, "lng": -74.0091059, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "Henry St & Atlantic Ave", "lat": 40.69089272, "lng": -73.99612349, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "E 39 St & 3 Ave", "lat": 40.7489006, "lng": -73.97604882, "sub": 0, "cus": 1, "ratio": 100.0}, {"name": "Maiden Ln & Pearl St", "lat": 40.70706456, "lng": -74.00731853, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "Cliff St & Fulton St_1", "lat": 40.70823502, "lng": -74.00530063, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "Vesey Pl & River Terrace", "lat": 40.7153379, "lng": -74.01658354, "sub": 4, "cus": 0, "ratio": 0.0}, {"name": "S Portland Ave & Hanson Pl", "lat": 40.68539567, "lng": -73.97431458, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "Atlantic Ave & Furman St", "lat": 40.69165183, "lng": -73.9999786, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "Barclay St & Church St", "lat": 40.71291224, "lng": -74.01020234, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "W 59 St & 10 Ave", "lat": 40.770513, "lng": -73.988038, "sub": 0, "cus": 1, "ratio": 100.0}, {"name": "W 22 St & 8 Ave", "lat": 40.74475148, "lng": -73.99915362, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "6 Ave & W 33 St", "lat": 40.74901271, "lng": -73.98848395, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "12 Ave & W 40 St", "lat": 40.76087502, "lng": -74.00277668, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "Exchange Place", "lat": 40.7162469, "lng": -74.0334588, "sub": 2853, "cus": 290, "ratio": 9.23}, {"name": "Paulus Hook", "lat": 40.7141454, "lng": -74.0335519, "sub": 837, "cus": 107, "ratio": 11.33}, {"name": "City Hall", "lat": 40.7177325, "lng": -74.043845, "sub": 1073, "cus": 76, "ratio": 6.61}, {"name": "Grove St PATH", "lat": 40.71958611647166, "lng": -74.04311746358871, "sub": 5991, "cus": 182, "ratio": 2.95}, {"name": "Warren St", "lat": 40.7211236, "lng": -74.03805095, "sub": 1126, "cus": 58, "ratio": 4.9}, {"name": "Union St", "lat": 40.7182113, "lng": -74.0836394, "sub": 119, "cus": 11, "ratio": 8.46}, {"name": "Liberty Light Rail", "lat": 40.7112423, "lng": -74.0557013, "sub": 708, "cus": 267, "ratio": 27.38}, {"name": "Lincoln Park", "lat": 40.7246050998869, "lng": -74.07840594649315, "sub": 367, "cus": 56, "ratio": 13.24}, {"name": "McGinley Square", "lat": 40.7253399253558, "lng": -74.06762212514877, "sub": 411, "cus": 24, "ratio": 5.52}, {"name": "Sip Ave", "lat": 40.73074262530658, "lng": -74.06378388404846, "sub": 1765, "cus": 57, "ratio": 3.13}, {"name": "Riverview Park", "lat": 40.7443187, "lng": -74.0439909, "sub": 205, "cus": 16, "ratio": 7.24}, {"name": "Heights Elevator", "lat": 40.74871594538023, "lng": -74.04044330120087, "sub": 266, "cus": 29, "ratio": 9.83}, {"name": "Newport Pkwy", "lat": 40.7287448, "lng": -74.0321082, "sub": 1188, "cus": 185, "ratio": 13.47}, {"name": "Dey St", "lat": 40.737711, "lng": -74.066921, "sub": 186, "cus": 6, "ratio": 3.12}, {"name": "Newport PATH", "lat": 40.7272235, "lng": -74.0337589, "sub": 2196, "cus": 149, "ratio": 6.35}, {"name": "Hamilton Park", "lat": 40.727595966, "lng": -74.044247311, "sub": 2336, "cus": 118, "ratio": 4.81}, {"name": "JC Medical Center", "lat": 40.71653978099194, "lng": -74.0496379137039, "sub": 515, "cus": 91, "ratio": 15.02}, {"name": "Hilltop", "lat": 40.7311689, "lng": -74.0575736, "sub": 299, "cus": 32, "ratio": 9.67}, {"name": "Oakland Ave", "lat": 40.7376037, "lng": -74.0524783, "sub": 433, "cus": 36, "ratio": 7.68}, {"name": "Brunswick St", "lat": 40.7241765, "lng": -74.0506564, "sub": 692, "cus": 40, "ratio": 5.46}, {"name": "Pershing Field", "lat": 40.742677141, "lng": -74.051788633, "sub": 473, "cus": 37, "ratio": 7.25}, {"name": "Newark Ave", "lat": 40.72152515, "lng": -74.046304543, "sub": 1031, "cus": 84, "ratio": 7.53}, {"name": "Christ Hospital", "lat": 40.734785818, "lng": -74.050443636, "sub": 204, "cus": 35, "ratio": 14.64}, {"name": "Van Vorst Park", "lat": 40.71848892, "lng": -74.047726625, "sub": 813, "cus": 48, "ratio": 5.57}, {"name": "Essex Light Rail", "lat": 40.7127742, "lng": -74.0364857, "sub": 871, "cus": 56, "ratio": 6.04}, {"name": "5 Corners Library", "lat": 40.73496102000952, "lng": -74.0595030784607, "sub": 251, "cus": 8, "ratio": 3.09}, {"name": "Baldwin at Montgomery", "lat": 40.7236589, "lng": -74.0641943, "sub": 419, "cus": 40, "ratio": 8.71}, {"name": "Morris Canal", "lat": 40.7124188237569, "lng": -74.03852552175522, "sub": 946, "cus": 73, "ratio": 7.16}, {"name": "Lafayette Park", "lat": 40.71346382669195, "lng": -74.06285852193832, "sub": 271, "cus": 19, "ratio": 6.55}, {"name": "Brunswick & 6th", "lat": 40.72601172964625, "lng": -74.05038893222809, "sub": 815, "cus": 46, "ratio": 5.34}, {"name": "Jersey & 6th St", "lat": 40.72528910781132, "lng": -74.04557168483734, "sub": 763, "cus": 18, "ratio": 2.3}, {"name": "Jersey & 3rd", "lat": 40.72333158646436, "lng": -74.04595255851744, "sub": 879, "cus": 49, "ratio": 5.28}, {"name": "Manila & 1st", "lat": 40.72165072487999, "lng": -74.04288411140442, "sub": 785, "cus": 29, "ratio": 3.56}, {"name": "Columbus Drive", "lat": 40.71835519823214, "lng": -74.03891444206238, "sub": 888, "cus": 45, "ratio": 4.82}, {"name": "Marin Light Rail", "lat": 40.71458403535893, "lng": -74.04281705617905, "sub": 1279, "cus": 157, "ratio": 10.93}, {"name": "Communipaw & Berry Lane", "lat": 40.71435836870427, "lng": -74.06661093235016, "sub": 180, "cus": 23, "ratio": 11.33}, {"name": "Monmouth and 6th", "lat": 40.72568548362901, "lng": -74.04879033565521, "sub": 658, "cus": 11, "ratio": 1.64}, {"name": "Dixon Mills", "lat": 40.721630142638354, "lng": -74.04996782541275, "sub": 591, "cus": 25, "ratio": 4.06}, {"name": "Astor Place", "lat": 40.71928220070702, "lng": -74.07126188278198, "sub": 295, "cus": 17, "ratio": 5.45}, {"name": "Leonard Gordon Park", "lat": 40.74590996631558, "lng": -74.0572714805603, "sub": 315, "cus": 22, "ratio": 6.53}, {"name": "Amsterdam Ave & W 66 St", "lat": 40.7746671, "lng": -73.98470567, "sub": 0, "cus": 1, "ratio": 100.0}, {"name": "JCBS Depot", "lat": 40.70965083364061, "lng": -74.06860113143921, "sub": 22, "cus": 0, "ratio": 0.0}, {"name": "York St", "lat": 40.71649, "lng": -74.04105, "sub": 329, "cus": 26, "ratio": 7.32}, {"name": "Montgomery St", "lat": 40.71942, "lng": -74.05099, "sub": 351, "cus": 36, "ratio": 9.3}, {"name": "W 116 St & Amsterdam Ave", "lat": 40.8067581, "lng": -73.9607082, "sub": 1, "cus": 0, "ratio": 0.0}, {"name": "Washington St", "lat": 40.7242941, "lng": -74.0354826, "sub": 894, "cus": 135, "ratio": 13.12}, {"name": "Harborside", "lat": 40.7192517, "lng": -74.034234, "sub": 1371, "cus": 126, "ratio": 8.42}, {"name": "Journal Square", "lat": 40.73367, "lng": -74.0625, "sub": 651, "cus": 47, "ratio": 6.73}, {"name": "Glenwood Ave", "lat": 40.72755146730012, "lng": -74.07106071710587, "sub": 120, "cus": 7, "ratio": 5.51}, {"name": "Fairmount Ave", "lat": 40.72572613742557, "lng": -74.07195925712585, "sub": 297, "cus": 14, "ratio": 4.5}, {"name": "Bergen Ave", "lat": 40.722103786686034, "lng": -74.07145500183105, "sub": 318, "cus": 20, "ratio": 5.92}, {"name": "Grand St", "lat": 40.71517767732029, "lng": -74.03768330812454, "sub": 562, "cus": 55, "ratio": 8.91}, {"name": "Jackson Square", "lat": 40.71113, "lng": -74.0789, "sub": 51, "cus": 16, "ratio": 23.88}], "maxSubStart": 4654, "maxCusStart": 253, "maxSubEnd": 5991, "maxCusEnd": 290, "centerStart": [40.72388397265905, -74.05206216494027], "centerEnd": [40.7258660435166, -74.03851876599931]};
+
+        function createMap(id, center) {
+            const map = L.map(id, { zoomControl: false }).setView(center, 14);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CartoDB'
+            }).addTo(map);
+            return map;
+        }
+
+        const mapStart = createMap('mapStart', DATA.centerStart);
+        const mapEnd = createMap('mapEnd', DATA.centerEnd);
+        const layerStart = L.layerGroup().addTo(mapStart);
+        const layerEnd = L.layerGroup().addTo(mapEnd);
+
+        function getColor(value, type, maxes) {
+            if (type === 'ratio') {
+                return value > 50 ? '#e67e22' : 
+                       value > 30 ? '#f39c12' : 
+                       value > 15 ? '#f1c40f' : '#7f8c8d';
+            }
+            const blueScale = ['#ebf5fb', '#85c1e9', '#3498db', '#2874a6', '#1b4f72'];
+            const orangeScale = ['#fef5e7', '#f8c471', '#e67e22', '#af601a', '#6e2c00'];
+            const scale = type === 'sub' ? blueScale : orangeScale;
+            const max = type === 'sub' ? maxes.sub : maxes.cus;
+            const idx = Math.min(Math.floor((value / max) * 4), 4);
+            return scale[idx];
+        }
+
+        function updateMap(layer, sites, mode, maxes) {
+            layer.clearLayers();
+            sites.forEach(site => {
+                let val, radius, color;
+                
+                if (mode === 'sub') {
+                    val = site.sub;
+                    // 调整半径系数，整体缩小：原0.8 -> 0.4
+                    radius = Math.sqrt(val) * 0.4;
+                    color = getColor(val, 'sub', maxes);
+                } else if (mode === 'cus') {
+                    val = site.cus;
+                    // 游客基数小，缩放系数也降低：原1.5 -> 0.8
+                    radius = Math.sqrt(val) * 0.8;
+                    color = getColor(val, 'cus', maxes);
+                } else {
+                    val = site.ratio;
+                    // 占比模式半径：原5 + val/10 -> 4 + val/20
+                    radius = 4 + (val / 20);
+                    color = getColor(val, 'ratio', maxes);
+                }
+
+                if (val > 0) {
+                    L.circleMarker([site.lat, site.lng], {
+                        radius: radius,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.7
+                    }).bindPopup(`
+                        <b>${site.name}</b><br>
+                        本地人: ${site.sub}<br>
+                        游客: ${site.cus}<br>
+                        游客占比: ${site.ratio}%
+                    `).addTo(layer);
+                }
+            });
+        }
+
+        const maxesStart = { sub: DATA.maxSubStart, cus: DATA.maxCusStart };
+        const maxesEnd = { sub: DATA.maxSubEnd, cus: DATA.maxCusEnd };
+
+        updateMap(layerStart, DATA.startSites, 'sub', maxesStart);
+        updateMap(layerEnd, DATA.endSites, 'sub', maxesEnd);
+
+        document.getElementById('viewStart').onchange = (e) => updateMap(layerStart, DATA.startSites, e.target.value, maxesStart);
+        document.getElementById('viewEnd').onchange = (e) => updateMap(layerEnd, DATA.endSites, e.target.value, maxesEnd);
+    </script>
+</body>
+</html>

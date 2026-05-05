@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC CitiBike 骑行旅游完全指南 | 数据叙事</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #2c3e50;
+            background: #f8f9fa;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 56px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            z-index: 1000;
+        }
+        .navbar-brand {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #e74c3c;
+            letter-spacing: -0.3px;
+        }
+        .navbar-links {
+            display: flex;
+            gap: 0.6rem;
+            list-style: none;
+        }
+        .navbar-links a {
+            text-decoration: none;
+            font-size: 0.82rem;
+            color: #546e7a;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .navbar-links a:hover, .navbar-links a.active {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        /* 章节通用 */
+        .chapter {
+            height: 100vh;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .chapter:nth-child(odd) { background: #ffffff; }
+        .chapter:nth-child(even) { background: #f4f6f8; }
+        .chapter.hero {
+            background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%) !important;
+        }
+
+        /* 文字区域 */
+        .story-text {
+            padding: 1.6rem 2rem 1rem;
+            text-align: center;
+            max-width: 860px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .story-text .chapter-num {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #e74c3c;
+            margin-bottom: 0.4rem;
+            border: 1.5px solid #e74c3c;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .story-text h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            color: #1a252f;
+        }
+        .story-text p {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #546e7a;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* 图表容器 */
+        .viz-wrap {
+            flex: 1;
+            min-height: 0;
+            padding: 0 1.5rem 1.5rem;
+            display: flex;
+            justify-content: center;
+        }
+        .viz-frame {
+            width: 100%;
+            max-width: 1200px;
+            height: 100%;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            background: #fff;
+        }
+
+        /* 封面 */
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
+            color: #fff;
+        }
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+        .hero .subtitle {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,0.75);
+            max-width: 560px;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .hero .cta {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #e74c3c;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hero .cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(231,76,60,0.35);
+        }
+        .hero .scroll-hint {
+            position: absolute;
+            bottom: 2rem;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        /* 移动端 */
+        @media (max-width: 768px) {
+            .navbar-links { display: none; }
+            .hero h1 { font-size: 2rem; }
+            .story-text h2 { font-size: 1.25rem; }
+            .viz-wrap { padding: 0 0.5rem 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+  <!-- 导航栏 -->
+  <nav class="navbar">
+    <div class="navbar-brand">🚲 CitiBike 旅游指南</div>
+    <ul class="navbar-links">
+      <li><a href="#ch0">热门月份</a></li>
+      <li><a href="#ch1">景点热度</a></li>
+      <li><a href="#ch2">游客差异</a></li>
+      <li><a href="#ch3">黄金天气</a></li>
+      <li><a href="#ch4">最佳时段</a></li>
+      <li><a href="#ch5">周末模式</a></li>
+      <li><a href="#ch6">经典路线</a></li>
+    </ul>
+  </nav>
+
+  <!-- 封面 -->
+  <section class="chapter hero" id="top">
+    <h1>NYC CitiBike<br>骑行旅游完全指南</h1>
+    <p class="subtitle">
+      用数据告诉你：纽约哪里最值得骑车逛、什么季节最舒服、什么时候能避开通勤人潮、以及本地人不会告诉你的经典路线。
+    </p>
+    <a href="#ch0" class="cta">开始探索</a>
+    <div class="scroll-hint">↓ 向下滚动</div>
+  </section>
+
+  <!-- Chapter 0: 热门月份 -->
+  <section class="chapter" id="ch0">
+    <div class="story-text">
+      <span class="chapter-num">Chapter 00</span>
+      <h2>骑行热度日历：哪个月份最火爆？</h2>
+      <p>
+        直观对比全年各月的骑行量，你会发现<strong>8月</strong>独占鳌头，成为当之无愧的骑行黄金月。
+        通过会员与非会员的比例变化，还能看出游客涌入的节奏。点击柱子即可查看月度详情。
+      </p>
+    </div>
+    <div class="viz-wrap">
+      <!-- 请将 src 改为你实际的 chapter0 文件名 -->
+      <iframe class="viz-frame" src="chapter0_user_type_monthly.html" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- Chapter 1: 8月站点热度 -->
+  <section class="chapter" id="ch1">
+    <div class="story-text">
+      <span class="chapter-num">Chapter 01</span>
+      <h2>景点雷达：8月最热门站点</h2>
+      <p>
+        聚焦8月，气泡大小代表骑行量，颜色渐变表示热门程度。切换“出发”与“到达”，
+        可以发现哪些站点是骑行者的汇聚点。红色最深的区域正是旅行者最爱的打卡地。
+      </p>
+    </div>
+    <div class="viz-wrap">
+      <iframe class="viz-frame" src="chapter1_station_heatmap.html" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- Chapter 2: 游客 vs 本地人 -->
+  <section class="chapter" id="ch2">
+    <div class="story-text">
+      <span class="chapter-num">Chapter 02</span>
+      <h2>游客 vs 本地人：路线大不同</h2>
+      <p>
+        左侧地图是起点（出发），右侧是终点（到达）。下拉切换 Subscriber（本地人） 与 Customer（游客），
+        你会发现游客偏爱滨水景观和休闲区，而本地人集中在通勤枢纽。游客占比高的站点往往是最佳拍照点。
+      </p>
+    </div>
+    <div class="viz-wrap">
+      <iframe class="viz-frame" src="chapter2_usertype_map.html" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- Chapter 3: 天气与骑行 -->
+  <section class="chapter" id="ch3">
+    <div class="story-text">
+      <span class="chapter-num">Chapter 03</span>
+      <h2>黄金天气：温度宜人、降雨最少</h2>
+      <p>
+        柱状骑行量、红线温度、绿线降水（可切换湿度/风速）。9月下旬到10月中旬温度宜人（65-72°F），
+        降雨最少，骑行量全年最高。8月虽然较热，但晴朗少雨，依然是出行热季。
+      </p>
+    </div>
+    <div class="viz-wrap">
+      <iframe class="viz-frame" src="chapter3_weather_calendar.html" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- Chapter 4: 一天中最佳时段 -->
+  <section class="chapter" id="ch4">
+    <div class="story-text">
+      <span class="chapter-num">Chapter 04</span>
+      <h2>时间管理：避开高峰，享受骑行</h2>
+      <p>
+        Choropleth 地图显示不同时段的邮编骑行量，右侧热力图展示星期-小时分布。
+        早8-9点和晚5-7点是通勤高峰，建议选择 Late Morning (9-11AM) 或 Afternoon (12-4PM) 出行。
+      </p>
+    </div>
+    <div class="viz-wrap">
+      <iframe class="viz-frame" src="chapter4_timeofday_choropleth.html" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- Chapter 5: 周末 vs 工作日 -->
+  <section class="chapter" id="ch5">
+    <div class="story-text">
+      <span class="chapter-num">Chapter 05</span>
+      <h2>周末特供：休闲天堂在哪里？</h2>
+      <p>
+        气泡颜色表示周末日均占比，绿色最高值代表纯粹的休闲娱乐区。
+        沿着绿色站点骑行，你将体验 NYC 的周末慢生活：滨水公园、艺术区、早市周边都是好选择。
+      </p>
+    </div>
+    <div class="viz-wrap">
+      <iframe class="viz-frame" src="chapter5_daily_average_weekend_ratio.html" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- Chapter 6: 最热OD路线 -->
+  <section class="chapter" id="ch6">
+    <div class="story-text">
+      <span class="chapter-num">Chapter 06</span>
+      <h2>经典路线：跟着大众的选择走</h2>
+      <p>
+        曲线粗细代表骑行流量，浅蓝起点、浅粉终点。下拉可切换全部总量、工作日日均、周末日均。
+        这些路线经过无数次验证，是第一次骑行者最值得尝试的经典线路。
+      </p>
+    </div>
+    <div class="viz-wrap">
+      <iframe class="viz-frame" src="chapter6_od_curves_daily_avg.html" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <script>
+    // 滚动高亮导航
+    const chapters = document.querySelectorAll('.chapter[id]');
+    const links = document.querySelectorAll('.navbar-links a');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          links.forEach(link => link.classList.remove('active'));
+          const id = entry.target.getAttribute('id');
+          const activeLink = document.querySelector(`.navbar-links a[href="#${id}"]`);
+          if (activeLink) activeLink.classList.add('active');
+        }
+      });
+    }, { threshold: 0.5 });
+    chapters.forEach(ch => observer.observe(ch));
+  </script>
+
+</body>
+</html>

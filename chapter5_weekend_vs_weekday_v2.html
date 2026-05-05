@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>周末出行占比分析 - 进出站对比</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        #map { width: 100%; height: 100vh; background: #f8f9fa; }
+        
+        /* 顶部切换面板 */
+        .selector-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
+            padding: 10px 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex; align-items: center; gap: 12px; border: 1px solid rgba(0,0,0,0.05);
+        }
+        .selector-panel label { font-size: 13px; font-weight: 600; color: #2c3e50; }
+        select { padding: 6px 12px; border-radius: 8px; border: 1px solid #ddd; outline: none; cursor: pointer; font-size: 13px; }
+
+        .custom-tooltip {
+            background: #fff9c4 !important; border: 1px solid #fbc02d !important;
+            color: #333 !important; font-size: 12px !important; box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .legend {
+            position: absolute; top: 20px; right: 20px; z-index: 1000;
+            background: rgba(255,255,255,0.9); padding: 15px; border-radius: 8px; 
+            font-size: 11px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .legend-gradient {
+            width: 18px; height: 120px;
+            background: linear-gradient(to top, #d32f2f, #fbc02d, #388e3c);
+            margin: 5px auto; border-radius: 9px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="selector-panel">
+        <label>站点类型</label>
+        <select id="typeSelect">
+            <option value="start_stats">🚴 流出站情况 (Start Stations)</option>
+            <option value="end_stats">🏁 流入站情况 (End Stations)</option>
+        </select>
+    </div>
+    <div class="legend">
+        <div style="text-align:center; font-weight:bold; margin-bottom:5px;">周末占比 %</div>
+        <div style="text-align:center">100</div>
+        <div class="legend-gradient"></div>
+        <div style="text-align:center">0</div>
+    </div>
+
+    <script>
+        const DATA = {"start_stats": [{"name": "Exchange Place", "lat": 40.7162469, "lng": -74.0334588, "total": 2574, "weekday": 2089, "weekend": 485, "ratio": 18.8}, {"name": "Paulus Hook", "lat": 40.7141454, "lng": -74.0335519, "total": 1129, "weekday": 959, "weekend": 170, "ratio": 15.1}, {"name": "City Hall", "lat": 40.7177325, "lng": -74.043845, "total": 1107, "weekday": 885, "weekend": 222, "ratio": 20.1}, {"name": "Grove St PATH", "lat": 40.71958611647166, "lng": -74.04311746358871, "total": 4806, "weekday": 4165, "weekend": 641, "ratio": 13.3}, {"name": "Warren St", "lat": 40.7211236, "lng": -74.03805095, "total": 1286, "weekday": 995, "weekend": 291, "ratio": 22.6}, {"name": "Union St", "lat": 40.7182113, "lng": -74.0836394, "total": 99, "weekday": 87, "weekend": 12, "ratio": 12.1}, {"name": "Liberty Light Rail", "lat": 40.7112423, "lng": -74.0557013, "total": 910, "weekday": 611, "weekend": 299, "ratio": 32.9}, {"name": "Lincoln Park", "lat": 40.7246050998869, "lng": -74.07840594649315, "total": 300, "weekday": 228, "weekend": 72, "ratio": 24.0}, {"name": "McGinley Square", "lat": 40.7253399253558, "lng": -74.06762212514877, "total": 593, "weekday": 505, "weekend": 88, "ratio": 14.8}, {"name": "Sip Ave", "lat": 40.73074262530658, "lng": -74.06378388404846, "total": 2147, "weekday": 1879, "weekend": 268, "ratio": 12.5}, {"name": "Riverview Park", "lat": 40.7443187, "lng": -74.0439909, "total": 268, "weekday": 207, "weekend": 61, "ratio": 22.8}, {"name": "Heights Elevator", "lat": 40.74871594538023, "lng": -74.04044330120087, "total": 326, "weekday": 265, "weekend": 61, "ratio": 18.7}, {"name": "Newport Pkwy", "lat": 40.7287448, "lng": -74.0321082, "total": 1391, "weekday": 1017, "weekend": 374, "ratio": 26.9}, {"name": "Dey St", "lat": 40.737711, "lng": -74.066921, "total": 136, "weekday": 113, "weekend": 23, "ratio": 16.9}, {"name": "Newport PATH", "lat": 40.7272235, "lng": -74.0337589, "total": 2008, "weekday": 1730, "weekend": 278, "ratio": 13.8}, {"name": "Hamilton Park", "lat": 40.727595966, "lng": -74.044247311, "total": 2636, "weekday": 2201, "weekend": 435, "ratio": 16.5}, {"name": "JC Medical Center", "lat": 40.71653978099194, "lng": -74.0496379137039, "total": 531, "weekday": 361, "weekend": 170, "ratio": 32.0}, {"name": "Hilltop", "lat": 40.7311689, "lng": -74.0575736, "total": 396, "weekday": 308, "weekend": 88, "ratio": 22.2}, {"name": "Oakland Ave", "lat": 40.7376037, "lng": -74.0524783, "total": 662, "weekday": 571, "weekend": 91, "ratio": 13.7}, {"name": "Brunswick St", "lat": 40.7241765, "lng": -74.0506564, "total": 820, "weekday": 652, "weekend": 168, "ratio": 20.5}, {"name": "Pershing Field", "lat": 40.742677141, "lng": -74.051788633, "total": 513, "weekday": 423, "weekend": 90, "ratio": 17.5}, {"name": "Newark Ave", "lat": 40.72152515, "lng": -74.046304543, "total": 1123, "weekday": 864, "weekend": 259, "ratio": 23.1}, {"name": "Christ Hospital", "lat": 40.734785818, "lng": -74.050443636, "total": 345, "weekday": 297, "weekend": 48, "ratio": 13.9}, {"name": "Van Vorst Park", "lat": 40.71848892, "lng": -74.047726625, "total": 998, "weekday": 769, "weekend": 229, "ratio": 22.9}, {"name": "Essex Light Rail", "lat": 40.7127742, "lng": -74.0364857, "total": 796, "weekday": 653, "weekend": 143, "ratio": 18.0}, {"name": "5 Corners Library", "lat": 40.73496102000952, "lng": -74.0595030784607, "total": 245, "weekday": 193, "weekend": 52, "ratio": 21.2}, {"name": "Baldwin at Montgomery", "lat": 40.7236589, "lng": -74.0641943, "total": 524, "weekday": 423, "weekend": 101, "ratio": 19.3}, {"name": "Morris Canal", "lat": 40.7124188237569, "lng": -74.03852552175522, "total": 1230, "weekday": 1007, "weekend": 223, "ratio": 18.1}, {"name": "Lafayette Park", "lat": 40.71346382669195, "lng": -74.06285852193832, "total": 272, "weekday": 239, "weekend": 33, "ratio": 12.1}, {"name": "Brunswick & 6th", "lat": 40.72601172964625, "lng": -74.05038893222809, "total": 1020, "weekday": 863, "weekend": 157, "ratio": 15.4}, {"name": "Jersey & 6th St", "lat": 40.72528910781132, "lng": -74.04557168483734, "total": 961, "weekday": 806, "weekend": 155, "ratio": 16.1}, {"name": "Jersey & 3rd", "lat": 40.72333158646436, "lng": -74.04595255851744, "total": 977, "weekday": 760, "weekend": 217, "ratio": 22.2}, {"name": "Manila & 1st", "lat": 40.72165072487999, "lng": -74.04288411140442, "total": 811, "weekday": 647, "weekend": 164, "ratio": 20.2}, {"name": "Columbus Drive", "lat": 40.71835519823214, "lng": -74.03891444206238, "total": 949, "weekday": 760, "weekend": 189, "ratio": 19.9}, {"name": "Marin Light Rail", "lat": 40.71458403535893, "lng": -74.04281705617905, "total": 1489, "weekday": 1102, "weekend": 387, "ratio": 26.0}, {"name": "Communipaw & Berry Lane", "lat": 40.71435836870427, "lng": -74.06661093235016, "total": 177, "weekday": 140, "weekend": 37, "ratio": 20.9}, {"name": "Monmouth and 6th", "lat": 40.72568548362901, "lng": -74.04879033565521, "total": 616, "weekday": 504, "weekend": 112, "ratio": 18.2}, {"name": "Dixon Mills", "lat": 40.721630142638354, "lng": -74.04996782541275, "total": 676, "weekday": 556, "weekend": 120, "ratio": 17.8}, {"name": "Astor Place", "lat": 40.71928220070702, "lng": -74.07126188278198, "total": 321, "weekday": 278, "weekend": 43, "ratio": 13.4}, {"name": "Leonard Gordon Park", "lat": 40.74590996631558, "lng": -74.0572714805603, "total": 347, "weekday": 304, "weekend": 43, "ratio": 12.4}, {"name": "JCBS Depot", "lat": 40.70965083364061, "lng": -74.06860113143921, "total": 1, "weekday": 0, "weekend": 1, "ratio": 100.0}, {"name": "York St", "lat": 40.71649, "lng": -74.04105, "total": 402, "weekday": 321, "weekend": 81, "ratio": 20.1}, {"name": "Montgomery St", "lat": 40.71942, "lng": -74.05099, "total": 408, "weekday": 311, "weekend": 97, "ratio": 23.8}, {"name": "Washington St", "lat": 40.7242941, "lng": -74.0354826, "total": 1028, "weekday": 834, "weekend": 194, "ratio": 18.9}, {"name": "Harborside", "lat": 40.7192517, "lng": -74.034234, "total": 1657, "weekday": 1340, "weekend": 317, "ratio": 19.1}, {"name": "Journal Square", "lat": 40.73367, "lng": -74.0625, "total": 793, "weekday": 710, "weekend": 83, "ratio": 10.5}, {"name": "Glenwood Ave", "lat": 40.72755146730012, "lng": -74.07106071710587, "total": 162, "weekday": 127, "weekend": 35, "ratio": 21.6}, {"name": "Fairmount Ave", "lat": 40.72572613742557, "lng": -74.07195925712585, "total": 375, "weekday": 312, "weekend": 63, "ratio": 16.8}, {"name": "Bergen Ave", "lat": 40.722103786686034, "lng": -74.07145500183105, "total": 367, "weekday": 302, "weekend": 65, "ratio": 17.7}, {"name": "Grand St", "lat": 40.71517767732029, "lng": -74.03768330812454, "total": 658, "weekday": 530, "weekend": 128, "ratio": 19.5}, {"name": "Jackson Square", "lat": 40.71113, "lng": -74.0789, "total": 66, "weekday": 46, "weekend": 20, "ratio": 30.3}], "end_stats": [{"name": "Barrow St & Hudson St", "lat": 40.73172428, "lng": -74.00674436, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Hudson St & Reade St", "lat": 40.71625008, "lng": -74.0091059, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Henry St & Atlantic Ave", "lat": 40.69089272, "lng": -73.99612349, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "E 39 St & 3 Ave", "lat": 40.7489006, "lng": -73.97604882, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Maiden Ln & Pearl St", "lat": 40.70706456, "lng": -74.00731853, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Cliff St & Fulton St_1", "lat": 40.70823502, "lng": -74.00530063, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Vesey Pl & River Terrace", "lat": 40.7153379, "lng": -74.01658354, "total": 4, "weekday": 2, "weekend": 2, "ratio": 50.0}, {"name": "S Portland Ave & Hanson Pl", "lat": 40.68539567, "lng": -73.97431458, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Atlantic Ave & Furman St", "lat": 40.69165183, "lng": -73.9999786, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Barclay St & Church St", "lat": 40.71291224, "lng": -74.01020234, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "W 59 St & 10 Ave", "lat": 40.770513, "lng": -73.988038, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "W 22 St & 8 Ave", "lat": 40.74475148, "lng": -73.99915362, "total": 1, "weekday": 0, "weekend": 1, "ratio": 100.0}, {"name": "6 Ave & W 33 St", "lat": 40.74901271, "lng": -73.98848395, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "12 Ave & W 40 St", "lat": 40.76087502, "lng": -74.00277668, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "Exchange Place", "lat": 40.7162469, "lng": -74.0334588, "total": 3143, "weekday": 2583, "weekend": 560, "ratio": 17.8}, {"name": "Paulus Hook", "lat": 40.7141454, "lng": -74.0335519, "total": 944, "weekday": 764, "weekend": 180, "ratio": 19.1}, {"name": "City Hall", "lat": 40.7177325, "lng": -74.043845, "total": 1149, "weekday": 941, "weekend": 208, "ratio": 18.1}, {"name": "Grove St PATH", "lat": 40.71958611647166, "lng": -74.04311746358871, "total": 6173, "weekday": 5432, "weekend": 741, "ratio": 12.0}, {"name": "Warren St", "lat": 40.7211236, "lng": -74.03805095, "total": 1184, "weekday": 910, "weekend": 274, "ratio": 23.1}, {"name": "Union St", "lat": 40.7182113, "lng": -74.0836394, "total": 130, "weekday": 111, "weekend": 19, "ratio": 14.6}, {"name": "Liberty Light Rail", "lat": 40.7112423, "lng": -74.0557013, "total": 975, "weekday": 672, "weekend": 303, "ratio": 31.1}, {"name": "Lincoln Park", "lat": 40.7246050998869, "lng": -74.07840594649315, "total": 423, "weekday": 330, "weekend": 93, "ratio": 22.0}, {"name": "McGinley Square", "lat": 40.7253399253558, "lng": -74.06762212514877, "total": 435, "weekday": 382, "weekend": 53, "ratio": 12.2}, {"name": "Sip Ave", "lat": 40.73074262530658, "lng": -74.06378388404846, "total": 1822, "weekday": 1569, "weekend": 253, "ratio": 13.9}, {"name": "Riverview Park", "lat": 40.7443187, "lng": -74.0439909, "total": 221, "weekday": 176, "weekend": 45, "ratio": 20.4}, {"name": "Heights Elevator", "lat": 40.74871594538023, "lng": -74.04044330120087, "total": 295, "weekday": 237, "weekend": 58, "ratio": 19.7}, {"name": "Newport Pkwy", "lat": 40.7287448, "lng": -74.0321082, "total": 1373, "weekday": 987, "weekend": 386, "ratio": 28.1}, {"name": "Dey St", "lat": 40.737711, "lng": -74.066921, "total": 192, "weekday": 159, "weekend": 33, "ratio": 17.2}, {"name": "Newport PATH", "lat": 40.7272235, "lng": -74.0337589, "total": 2345, "weekday": 1975, "weekend": 370, "ratio": 15.8}, {"name": "Hamilton Park", "lat": 40.727595966, "lng": -74.044247311, "total": 2454, "weekday": 2004, "weekend": 450, "ratio": 18.3}, {"name": "JC Medical Center", "lat": 40.71653978099194, "lng": -74.0496379137039, "total": 606, "weekday": 398, "weekend": 208, "ratio": 34.3}, {"name": "Hilltop", "lat": 40.7311689, "lng": -74.0575736, "total": 331, "weekday": 284, "weekend": 47, "ratio": 14.2}, {"name": "Oakland Ave", "lat": 40.7376037, "lng": -74.0524783, "total": 469, "weekday": 413, "weekend": 56, "ratio": 11.9}, {"name": "Brunswick St", "lat": 40.7241765, "lng": -74.0506564, "total": 732, "weekday": 583, "weekend": 149, "ratio": 20.4}, {"name": "Pershing Field", "lat": 40.742677141, "lng": -74.051788633, "total": 510, "weekday": 422, "weekend": 88, "ratio": 17.3}, {"name": "Newark Ave", "lat": 40.72152515, "lng": -74.046304543, "total": 1115, "weekday": 832, "weekend": 283, "ratio": 25.4}, {"name": "Christ Hospital", "lat": 40.734785818, "lng": -74.050443636, "total": 239, "weekday": 203, "weekend": 36, "ratio": 15.1}, {"name": "Van Vorst Park", "lat": 40.71848892, "lng": -74.047726625, "total": 861, "weekday": 629, "weekend": 232, "ratio": 26.9}, {"name": "Essex Light Rail", "lat": 40.7127742, "lng": -74.0364857, "total": 927, "weekday": 800, "weekend": 127, "ratio": 13.7}, {"name": "5 Corners Library", "lat": 40.73496102000952, "lng": -74.0595030784607, "total": 259, "weekday": 223, "weekend": 36, "ratio": 13.9}, {"name": "Baldwin at Montgomery", "lat": 40.7236589, "lng": -74.0641943, "total": 459, "weekday": 376, "weekend": 83, "ratio": 18.1}, {"name": "Morris Canal", "lat": 40.7124188237569, "lng": -74.03852552175522, "total": 1019, "weekday": 807, "weekend": 212, "ratio": 20.8}, {"name": "Lafayette Park", "lat": 40.71346382669195, "lng": -74.06285852193832, "total": 290, "weekday": 256, "weekend": 34, "ratio": 11.7}, {"name": "Brunswick & 6th", "lat": 40.72601172964625, "lng": -74.05038893222809, "total": 861, "weekday": 718, "weekend": 143, "ratio": 16.6}, {"name": "Jersey & 6th St", "lat": 40.72528910781132, "lng": -74.04557168483734, "total": 781, "weekday": 634, "weekend": 147, "ratio": 18.8}, {"name": "Jersey & 3rd", "lat": 40.72333158646436, "lng": -74.04595255851744, "total": 928, "weekday": 713, "weekend": 215, "ratio": 23.2}, {"name": "Manila & 1st", "lat": 40.72165072487999, "lng": -74.04288411140442, "total": 814, "weekday": 642, "weekend": 172, "ratio": 21.1}, {"name": "Columbus Drive", "lat": 40.71835519823214, "lng": -74.03891444206238, "total": 933, "weekday": 757, "weekend": 176, "ratio": 18.9}, {"name": "Marin Light Rail", "lat": 40.71458403535893, "lng": -74.04281705617905, "total": 1436, "weekday": 1085, "weekend": 351, "ratio": 24.4}, {"name": "Communipaw & Berry Lane", "lat": 40.71435836870427, "lng": -74.06661093235016, "total": 203, "weekday": 167, "weekend": 36, "ratio": 17.7}, {"name": "Monmouth and 6th", "lat": 40.72568548362901, "lng": -74.04879033565521, "total": 669, "weekday": 570, "weekend": 99, "ratio": 14.8}, {"name": "Dixon Mills", "lat": 40.721630142638354, "lng": -74.04996782541275, "total": 616, "weekday": 511, "weekend": 105, "ratio": 17.0}, {"name": "Astor Place", "lat": 40.71928220070702, "lng": -74.07126188278198, "total": 312, "weekday": 278, "weekend": 34, "ratio": 10.9}, {"name": "Leonard Gordon Park", "lat": 40.74590996631558, "lng": -74.0572714805603, "total": 337, "weekday": 298, "weekend": 39, "ratio": 11.6}, {"name": "Amsterdam Ave & W 66 St", "lat": 40.7746671, "lng": -73.98470567, "total": 1, "weekday": 1, "weekend": 0, "ratio": 0.0}, {"name": "JCBS Depot", "lat": 40.70965083364061, "lng": -74.06860113143921, "total": 22, "weekday": 21, "weekend": 1, "ratio": 4.5}, {"name": "York St", "lat": 40.71649, "lng": -74.04105, "total": 355, "weekday": 285, "weekend": 70, "ratio": 19.7}, {"name": "Montgomery St", "lat": 40.71942, "lng": -74.05099, "total": 387, "weekday": 284, "weekend": 103, "ratio": 26.6}, {"name": "W 116 St & Amsterdam Ave", "lat": 40.8067581, "lng": -73.9607082, "total": 1, "weekday": 0, "weekend": 1, "ratio": 100.0}, {"name": "Washington St", "lat": 40.7242941, "lng": -74.0354826, "total": 1029, "weekday": 806, "weekend": 223, "ratio": 21.7}, {"name": "Harborside", "lat": 40.7192517, "lng": -74.034234, "total": 1497, "weekday": 1222, "weekend": 275, "ratio": 18.4}, {"name": "Journal Square", "lat": 40.73367, "lng": -74.0625, "total": 698, "weekday": 634, "weekend": 64, "ratio": 9.2}, {"name": "Glenwood Ave", "lat": 40.72755146730012, "lng": -74.07106071710587, "total": 127, "weekday": 98, "weekend": 29, "ratio": 22.8}, {"name": "Fairmount Ave", "lat": 40.72572613742557, "lng": -74.07195925712585, "total": 311, "weekday": 264, "weekend": 47, "ratio": 15.1}, {"name": "Bergen Ave", "lat": 40.722103786686034, "lng": -74.07145500183105, "total": 338, "weekday": 274, "weekend": 64, "ratio": 18.9}, {"name": "Grand St", "lat": 40.71517767732029, "lng": -74.03768330812454, "total": 617, "weekday": 477, "weekend": 140, "ratio": 22.7}, {"name": "Jackson Square", "lat": 40.71113, "lng": -74.0789, "total": 67, "weekday": 38, "weekend": 29, "ratio": 43.3}], "center": [40.72269495128244, -74.04570930122098]};
+        const map = L.map('map', { zoomControl: false }).setView(DATA.center, 14);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        function getColor(ratio) {
+            if (ratio < 20) return '#d32f2f';
+            if (ratio < 35) return '#f57c00';
+            if (ratio < 50) return '#fbc02d';
+            if (ratio < 65) return '#8bc34a';
+            return '#388e3c';
+        }
+
+        let layer = L.layerGroup().addTo(map);
+
+        function update(type) {
+            layer.clearLayers();
+            const sites = DATA[type];
+
+            sites.forEach(s => {
+                // 调小半径系数从 1.5 降至 0.8，防止遮挡
+                const radius = Math.sqrt(s.total) * 0.8; 
+                
+                const marker = L.circleMarker([s.lat, s.lng], {
+                    radius: radius,
+                    fillColor: getColor(s.ratio),
+                    color: '#fff',
+                    weight: 1,
+                    fillOpacity: 0.75
+                }).addTo(layer);
+
+                marker.bindTooltip(`
+                    <div style="line-height:1.4">
+                        <b>${s.name}</b><br>
+                        出行总量: ${s.total}<br>
+                        周末占比: ${s.ratio}%<br>
+                        工作日: ${s.weekday}<br>
+                        周末: ${s.weekend}
+                    </div>
+                `, { className: 'custom-tooltip', sticky: true });
+            });
+        }
+
+        document.getElementById('typeSelect').onchange = (e) => update(e.target.value);
+        update('start_stats');
+    </script>
+</body>
+</html>
