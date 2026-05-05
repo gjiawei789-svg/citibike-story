@@ -1,7 +1,7 @@
-```markdown
-# 🚲 NYC CitiBike Cycling Tourism Complete Guide
 
-> An interactive data story revealing the spatiotemporal patterns of bike-sharing trips in New York City (Jersey City) in 2018 through seven visualization chapters.  
+# 🚲 JC CitiBike Cycling Tourism Complete Guide
+
+> An interactive data story revealing the spatiotemporal patterns of bike-sharing trips in Jersey City in 2018 through seven visualization chapters.  
 > **Live site → [https://gjiawei789-svg.github.io/citibike-story/](https://gjiawei789-svg.github.io/citibike-story/)**
 
 ---
@@ -99,5 +99,5 @@ The full scrolling story page will load with all interactive charts embedded –
 ---
 
 **Enjoy the ride! 🚴‍♂️**
-```
+
 
