@@ -2,7 +2,7 @@
 # 🚲 NYC CitiBike Cycling Tourism Complete Guide
 
 > An interactive data story revealing the spatiotemporal patterns of bike-sharing trips in New York City (Jersey City) in 2018 through seven visualization chapters.  
-> **Live site →** [https://gjiawei789-svg.github.io/citibike-story/]
+> **Live site → [https://gjiawei789-svg.github.io/citibike-story/](https://gjiawei789-svg.github.io/citibike-story/)**
 
 ---
 
@@ -65,9 +65,13 @@ The full scrolling story page will load with all interactive charts embedded –
 4. **Run the generation scripts**
    Execute them one by one:
    ```bash
-   python generate_chapter0.py
-   python generate_chapter1.py
-   ...
+   python html1.py
+   python html2.py
+   python html3.py
+   python html4.py
+   python html5.py
+   python html6.py
+   python html7.py
    ```
    Each script produces the corresponding HTML file in the current directory.  
    You can also create a batch script to run them all at once.
@@ -79,7 +83,6 @@ The full scrolling story page will load with all interactive charts embedded –
      python -m http.server 8000
      ```
      Then open your browser and go to `http://localhost:8000`
-
 
 ---
 
@@ -95,6 +98,6 @@ The full scrolling story page will load with all interactive charts embedded –
 
 ---
 
-**Enjoy the ride! 🚴‍♂️**  
-
+**Enjoy the ride! 🚴‍♂️**
 ```
+
